@@ -1,19 +1,72 @@
 ---
 alwaysApply: true
 ---
-# Debugging Context
+# Debugging guide (express-mongoose)
 
-## Common issues
-- Null user.profile: Usually means the user was deleted but sessions weren't cleared
-- Payment timeout errors: Check the payment gateway status page first
-- Slow API responses: Often caused by N+1 queries, check the query logs
+## Common startup issues
+### 1) MongoDB connection failures
+Symptoms:
+- App never starts listening on `localhost:3000`
+- Console prints a Mongoose connection error
 
-## Useful commands
-- npm run debug:payments - Runs payment service with verbose logging
-- docker logs worker -f - Follow worker logs for background job issues
-- npm run db:query-log - Shows recent slow queries
+Checks:
+- Ensure `MONGODB_URI` is set in your environment (required by `app.js`).
+- Verify network access / Atlas IP allowlist (if using Atlas).
+- Confirm the URI includes the database name.
 
-## Debugging tips
-- Always check if the issue reproduces locally before diving in
-- The staging database resets nightly; check if data-dependent bugs are timing related
-- Payment sandbox credentials expire monthly; check if payment tests suddenly fail
+### 2) Session store issues
+Symptoms:
+- Login appears to succeed but user is not remembered
+- Errors from `connect-mongodb-session`
+
+Checks:
+- Session store uses the same `MONGODB_URI`.
+- Confirm the Mongo user has permissions to create/write the `sessions` collection.
+
+## Auth-related issues
+### 3) req.user is undefined on protected routes
+Where it happens:
+- `controllers/shop.js` uses `req.user.populate(...)` for cart/orders
+- `controllers/admin.js` uses `req.user` when creating products (`userId: req.user`)
+
+Root causes:
+- Session does not contain `user` (login didn’t persist)
+- User was deleted from DB but session still references old `_id`
+- The user-loading middleware in `app.js` is not running (middleware order changed)
+
+Debug steps:
+- Log `req.session` inside the `app.use((req, res, next) => { ... User.findById ... })` block.
+- Confirm `req.session.user._id` exists.
+- Confirm `User.findById(...)` returns a document (not null).
+
+## CSRF errors
+### 4) ForbiddenError: invalid csrf token
+Root causes:
+- Missing `_csrf` hidden input in a form
+- Submitting a POST from outside the app (e.g., Postman) without the token
+- CSRF token not being set in locals
+
+Debug steps:
+- Ensure `app.use(csrfProtection)` is after `session(...)`.
+- Ensure templates render `<%= csrfToken %>` and include the hidden field.
+- Confirm the route is not missing `res.locals.csrfToken = req.csrfToken()` middleware.
+
+## Data flow bugs
+### 5) Cart/order rendering issues
+Notes:
+- Cart relies on `req.user.populate('cart.items.productId')`.
+- Orders store product snapshots (`{ ...i.productId._doc }`) to preserve historical data.
+
+Debug steps:
+- Check if product documents referenced in the cart still exist.
+- Confirm cart items contain `{ productId, quantity }`.
+- Inspect the stored order documents to ensure `products[].product` contains the expected fields.
+
+## Useful local commands
+- `npm install`
+- `npm start` (runs nodemon)
+- `npm run start-server` (runs node)
+- Add temporary logs in controllers to print:
+  - `req.session.isLoggedIn`
+  - `req.session.user`
+  - `req.user?._id`

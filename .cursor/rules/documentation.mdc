@@ -1,19 +1,33 @@
 ---
 alwaysApply: true
 ---
-# Documentation Conventions
+# Documentation rules (express-mongoose)
 
-## READMEs
-- Use sentence case for headings
-- Include a "Quick Start" section that gets someone running in 5 minutes
-- Code examples should be complete and runnable
+## README expectations (when updating)
+- Keep it focused on getting the app running locally:
+  - Prereqs: Node.js + MongoDB
+  - Install: `npm install`
+  - Run: `npm start` (nodemon) and `npm run start-server` (node)
+  - Env vars: `MONGODB_URI` (and recommend `SESSION_SECRET` if/when added)
+- Mention main features:
+  - EJS SSR pages
+  - sessions stored in MongoDB
+  - CSRF protection
+  - login/signup/logout
+  - products/cart/orders/admin
+- Include a short route overview (public vs authenticated).
+- Avoid claiming API formats like OpenAPI unless the repo actually contains them (it doesn’t).
 
-## Code comments
-- Use JSDoc for all exported functions
-- Document "why" not "what" in inline comments
-- Don't comment obvious code
+## Inline code comments
+- Prefer minimal comments; document “why”, not “what”.
+- If adding non-obvious middleware ordering (sessions → csrf → flash), add a short comment explaining dependency/order.
 
-## API documentation
-- Use OpenAPI 3.0 format
-- Include example requests and responses
-- Document error responses, not just success cases
+## File-level docs (when adding new modules)
+- Put new Express middleware in `middleware/`.
+- Put new model logic in `models/` and keep controllers free of persistence details where possible.
+- Put helper utilities in `util/`.
+
+## Examples
+- Any code snippet in docs should match the repo’s current style:
+  - CommonJS (`require`, `module.exports`)
+  - Promise chains (unless the codebase is being refactored consistently to async/await)

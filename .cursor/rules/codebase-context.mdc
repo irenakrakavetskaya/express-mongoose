@@ -1,14 +1,66 @@
 ---
 alwaysApply: true
 ---
-# Codebase Context
+# Codebase context (express-mongoose)
 
-## Architecture
-- This is a monorepo with three main packages: api, web, and shared
-- The API uses Express with TypeORM
-- The web client is Next.js
+## What this repo is
+- Single Node.js app (not a monorepo) built with **Express 4** + **Mongoose**.
+- Server-side rendered UI using **EJS** templates.
+- Implements a simple shop flow: products, product detail, cart, orders, and admin product CRUD.
+- Authentication is session-based (login/signup/logout).
 
-## Common patterns
-- To add a new API endpoint, see src/api/routes/users.ts as an example
-- Database migrations are in src/api/migrations
-- Services handle business logic, repositories handle data access
+## Key runtime dependencies
+- express, body-parser
+- mongoose
+- express-session + connect-mongodb-session
+- csurf (CSRF protection)
+- connect-flash (flash messages)
+- bcryptjs (password hashing)
+
+## App entrypoint
+- `app.js`
+  - Creates the Express app
+  - Configures sessions (MongoDB-backed) and CSRF
+  - Loads the logged-in user from the session and sets `req.user`
+  - Registers routes (`/admin`, shop, auth)
+  - 404 handler
+  - Connects to MongoDB via `process.env.MONGODB_URI`
+  - Starts server on port `3000`
+
+## Main folders and responsibilities
+- `routes/`
+  - `routes/admin.js` — admin product routes (protected by `middleware/is-auth.js`)
+  - `routes/shop.js` — shop pages + cart + orders (cart/orders protected)
+  - `routes/auth.js` — login/signup/logout routes
+- `controllers/`
+  - `controllers/admin.js` — admin product CRUD handlers
+  - `controllers/shop.js` — product list/detail + cart + order handlers
+  - `controllers/auth.js` — login/signup/logout handlers
+  - `controllers/error.js` — 404 handler
+- `models/`
+  - `models/product.js` — Product schema (includes `userId` ref)
+  - `models/user.js` — User schema + cart methods (`addToCart`, `removeFromCart`, `clearCart`)
+  - `models/order.js` — Order schema (stores product snapshots + user reference)
+- `middleware/`
+  - `middleware/is-auth.js` — redirects to `/login` when not authenticated
+- `views/` — EJS templates
+- `public/` — static assets
+
+## Authentication & session flow
+- Login sets:
+  - `req.session.isLoggedIn = true`
+  - `req.session.user = user`
+- Per-request middleware in `app.js`:
+  - If `req.session.user` exists, loads the user from MongoDB and assigns to `req.user`
+- Authorization:
+  - `middleware/is-auth.js` checks `req.session.isLoggedIn`
+
+## Database notes
+- Mongo connection uses `process.env.MONGODB_URI`.
+- Session store uses the same MongoDB URI and stores sessions in the `sessions` collection.
+
+## Common patterns in this codebase
+- Controllers use promise chains (`.then().catch()`) rather than `async/await`.
+- Rendering uses `res.render(view, { ... })` and templates expect:
+  - `isAuthenticated` (frequently passed explicitly)
+  - `csrfToken` available via `res.locals.csrfToken` (set in `app.js`)

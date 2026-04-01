@@ -1,17 +1,53 @@
 ---
 alwaysApply: true
 ---
-# Review Context
+# Review rules (express-mongoose)
 
-## Patterns to check
-- Error handling: All async operations should use try/catch or the Result pattern
-- Validation: Public API endpoints must validate input before processing
-- Logging: Operations that can fail should log before and after with correlation IDs
+Use these checks when reviewing changes in this repo.
 
-## Files to reference
-- src/utils/errors.ts shows our error handling pattern
-- src/middleware/validation.ts shows our validation approach
+## 1) Routing & controller correctness
+- Routes should remain thin and delegate to `controllers/*`.
+- Ensure the route method/path matches the intended controller and template.
+- For protected routes, confirm `middleware/is-auth.js` is applied.
 
-## Known areas of risk
-- The legacy UserService has implicit null returns; always check for null
-- Payment operations must be idempotent; check for duplicate handling
+## 2) Auth/session invariants
+- Do not break session structure:
+  - `req.session.isLoggedIn` is the auth boolean.
+  - `req.session.user` holds the logged-in user document (or at least `_id`).
+- If touching login/logout/signup:
+  - Login must call `req.session.save(...)` before redirecting.
+  - Logout must call `req.session.destroy(...)`.
+- If adding new protected features, rely on `req.user` (loaded in `app.js`) and guard routes with `is-auth`.
+
+## 3) CSRF safety
+- Any new POST/PUT/DELETE form must include the CSRF hidden input:
+  - `<input type="hidden" name="_csrf" value="<%= csrfToken %>">`
+- Do not disable CSRF middleware unless you also adjust templates and security expectations.
+
+## 4) Mongoose & data integrity
+- Ensure schema changes are backward compatible with existing documents where possible.
+- When referencing documents:
+  - Use `Schema.Types.ObjectId` + `ref` consistently.
+- When mutating models:
+  - Confirm you call `.save()` and return the promise (or await it if you refactor).
+- `Order` intentionally stores **snapshots** of products (`product: Object`); don’t replace it with only product IDs unless you also update views/controllers accordingly.
+
+## 5) Error handling expectations (current style)
+- Current code uses promise chains with `.catch(err => console.log(err))`.
+- If you refactor to `async/await`, keep behavior consistent:
+  - Surround DB calls with try/catch
+  - Return/redirect/render in all branches
+- Avoid leaving requests hanging (always `return` after redirects inside promise chains when needed).
+
+## 6) Security & configuration review
+- Secrets/credentials must not be committed.
+- Mongo connection must come from `process.env.MONGODB_URI`.
+- Session secret should ideally come from env (currently hard-coded in `app.js`); if you change it, ensure deployments set it.
+
+## 7) View and locals consistency
+- `res.locals.isAuthenticated` and `res.locals.csrfToken` are set in `app.js`.
+- Many controllers also pass `isAuthenticated` explicitly; if you remove that, ensure templates still work (or update templates to rely on locals consistently).
+
+## 8) Don’t introduce unused dependencies
+- Keep `package.json` aligned with actual usage.
+- This repo is Express + Mongoose; don’t add heavy frameworks unless requested.
