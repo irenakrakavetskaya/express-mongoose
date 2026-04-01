@@ -1,0 +1,17 @@
+---
+alwaysApply: true
+---
+# Review Context
+
+## Patterns to check
+- Error handling: All async operations should use try/catch or the Result pattern
+- Validation: Public API endpoints must validate input before processing
+- Logging: Operations that can fail should log before and after with correlation IDs
+
+## Files to reference
+- src/utils/errors.ts shows our error handling pattern
+- src/middleware/validation.ts shows our validation approach
+
+## Known areas of risk
+- The legacy UserService has implicit null returns; always check for null
+- Payment operations must be idempotent; check for duplicate handling

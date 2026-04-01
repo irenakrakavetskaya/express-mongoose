@@ -1,3 +1,8 @@
+---
+name: rework-commits
+description: Split branch into reviewable commits
+---
+
 # Split branch into reviewable commits
 
 Rework a branch into a sequence of small, semantic commits for review.

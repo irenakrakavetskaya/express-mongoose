@@ -1,0 +1,19 @@
+---
+alwaysApply: true
+---
+# Debugging Context
+
+## Common issues
+- Null user.profile: Usually means the user was deleted but sessions weren't cleared
+- Payment timeout errors: Check the payment gateway status page first
+- Slow API responses: Often caused by N+1 queries, check the query logs
+
+## Useful commands
+- npm run debug:payments - Runs payment service with verbose logging
+- docker logs worker -f - Follow worker logs for background job issues
+- npm run db:query-log - Shows recent slow queries
+
+## Debugging tips
+- Always check if the issue reproduces locally before diving in
+- The staging database resets nightly; check if data-dependent bugs are timing related
+- Payment sandbox credentials expire monthly; check if payment tests suddenly fail

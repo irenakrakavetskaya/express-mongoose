@@ -1,0 +1,14 @@
+---
+alwaysApply: true
+---
+# Codebase Context
+
+## Architecture
+- This is a monorepo with three main packages: api, web, and shared
+- The API uses Express with TypeORM
+- The web client is Next.js
+
+## Common patterns
+- To add a new API endpoint, see src/api/routes/users.ts as an example
+- Database migrations are in src/api/migrations
+- Services handle business logic, repositories handle data access
