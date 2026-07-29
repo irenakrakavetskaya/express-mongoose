@@ -66,9 +66,12 @@ exports.getIndex = (req, res, next) => {
     .countDocuments()
     .then((numProducts) => {
       totalItems = numProducts;
-      return Product.find()
-        .skip((page - 1) * ITEMS_PER_PAGE)
-        .limit(ITEMS_PER_PAGE);
+      return (
+        Product.find()
+          //skipping the previous pages' items
+          .skip((page - 1) * ITEMS_PER_PAGE)
+          .limit(ITEMS_PER_PAGE)
+      );
     })
     .then((products) => {
       res.render('shop/index', {
@@ -152,6 +155,7 @@ exports.getCheckout = (req, res, next) => {
       products.forEach((p) => {
         total += p.quantity * p.productId.price;
       });
+
       return stripe.checkout.sessions.create({
         mode: 'payment',
         line_items: products.map((p) => ({
@@ -270,18 +274,24 @@ exports.getInvoice = (req, res, next) => {
       if (!order) {
         return next(new Error('No order found.'));
       }
+      // check that order belongs to user
       if (order.user.userId.toString() !== req.user._id.toString()) {
         return next(new Error('Unauthorized'));
       }
       const invoiceName = 'invoice-' + orderId + '.pdf';
       const invoicePath = path.join('data', 'invoices', invoiceName);
 
+      // create a pdf file
       const pdfDoc = new PDFDocument();
       res.setHeader('Content-Type', 'application/pdf');
+      // Content-Disposition define how file should be provide to client
+      // open or download automatically
       res.setHeader(
         'Content-Disposition',
         'inline; filename="' + invoiceName + '"',
       );
+      // pipe streams the generated PDF simultaneously to a file on disk
+      // (invoicePath) and directly to the HTTP response
       pdfDoc.pipe(fs.createWriteStream(invoicePath));
       pdfDoc.pipe(res);
 
@@ -318,8 +328,9 @@ exports.getInvoice = (req, res, next) => {
       //   );
       //   res.send(data);
       // });
-      // const file = fs.createReadStream(invoicePath);
 
+      // read file by streams in chunks
+      // const file = fs.createReadStream(invoicePath);
       // file.pipe(res);
     })
     .catch((err) => next(err));

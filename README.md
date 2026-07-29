@@ -56,10 +56,8 @@ npm install
 
 ### Development (with nodemon)
 
-```bash
+````bash
 npm start```
-
-
 
 The server listens on:
 
@@ -163,3 +161,4 @@ From `package.json`:
 - `npm run start-server` — `node app.js`
 
 ---
+````
