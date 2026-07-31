@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 // connect-mongodb-session is a session store for MongoDB
 const MongoDBStore = require('connect-mongodb-session')(session);
-const csrf = require('csurf');
+const { csrfSync } = require('csrf-sync');
 const flash = require('connect-flash');
 const multer = require('multer');
 
@@ -24,7 +24,7 @@ const store = new MongoDBStore({
   collection: 'sessions',
 });
 
-const csrfProtection = csrf();
+const { csrfSynchronisedProtection, generateToken } = csrfSync();
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -78,13 +78,13 @@ app.use(
   }),
 );
 
-app.use(csrfProtection);
+app.use(csrfSynchronisedProtection);
 
 app.use(flash());
 
 app.use((req, res, next) => {
   res.locals.isAuthenticated = req.session.isLoggedIn;
-  res.locals.csrfToken = req.csrfToken();
+  res.locals.csrfToken = generateToken(req);
   next();
 });
 
